@@ -216,14 +216,10 @@ ZebraX generates:
 4. Create **audit trails** - log all agent decisions for reproducibility
 5. Support **incremental reviews** - process large datasets in batches
 
-## 📝 License
-
-[Add your license here]
-
 ## 👥 Authors
 
-- **im-sanka** - [GitHub](https://github.com/im-sanka)
-- **rahmanuh** - [GitHub](https://github.com/rahmanuh)
+- [**im-sanka**](https://github.com/im-sanka)
+- [**rahmanuh**](https://github.com/rahmanuh)
 
 ## 📞 Support
 
