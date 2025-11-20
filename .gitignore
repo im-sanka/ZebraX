@@ -41,3 +41,4 @@ Temporary Items
 *.vsix
 
 # ---- End VScode specific ----
+.env*
