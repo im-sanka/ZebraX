@@ -12,7 +12,7 @@ ZebraX orchestrates three specialized AI agents to conduct comprehensive researc
 
 ## 🏗️ Architecture
 
-![ZebraX Architecture](./Architecture.png)
+![ZebraX Architecture](./images/Architecture.png)
 
 ### System Components
 
@@ -83,7 +83,7 @@ Results + Reference Data (optional)
 
 ## 🔄 Workflow
 
-![ZebraX Workflow](./Main-idea.png)
+![ZebraX Workflow](./images/Main-idea.png)
 
 ### Three-Checkpoint Systematic Review Process
 
