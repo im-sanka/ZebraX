@@ -18,19 +18,19 @@ ZebraX orchestrates three specialized AI agents to conduct comprehensive researc
 
 #### 1. **Belo LLM** (Research Question Generator)
 - **Purpose**: Simple agent that formulates research questions based on RAG (Retrieval-Augmented Generation) data
-- **Model**: Google Gemini 2.0 Flash (lightweight, fast inference)
+- **Model**: Google Gemini 2.5 Flash Lite (lightweight, fast inference)
 - **Inputs**: 
   - User prompts
   - Sample articles (optional)
   - RAG pipeline with defined system prompts
 - **Output**: Research questions to guide data extraction
 - **Use Case**: When users don't have predefined research questions, Belo generates them from provided content
-- **Why Gemini 2.0 Flash**: Optimal for quick, lightweight processing without complex reasoning
+- **Why Gemini 2.5 Flash Lite**: Optimal for quick, lightweight processing without complex reasoning
 
 #### 2. **Zebra Agent** (Multi-Agent Data Extractor)
 - **Purpose**: Parallel and sequential data extraction from research materials
-- **Root Agent Model**: Google Gemini Pro 1.5 (tool-native, optimized for function calling)
-- **Sub-Agents**: Specialized Gemini Pro 1.5 instances for parallel processing
+- **Root Agent Model**: Google Gemini 2.5 Pro (tool-native, optimized for function calling)
+- **Sub-Agents**: Specialized Gemma 3 Multimodal instances for parallel processing
 - **Components**:
   - **Root Agent**: Orchestrates and distributes tasks to Sub-Agents
   - **Sub-Agents**: Parallel workers with specialized extraction capabilities
@@ -47,11 +47,11 @@ ZebraX orchestrates three specialized AI agents to conduct comprehensive researc
   - Optionally processes sample articles
   - Outputs structured results
 - **Output**: Parsed data, graphs, validated content
-- **Why Gemini Pro 1.5**: Native tool integration, excellent for multi-agent coordination and parallel processing
+- **Why Gemini 2.5 Pro & Gemma**: Native tool integration in Pro for coordination, while Gemma provides cost-effective multimodal processing for sub-tasks.
 
 #### 3. **Cross Agent** (Statistical Validator & Judge)
 - **Purpose**: Cross-validate results and perform statistical analysis
-- **Model**: Google Gemini 2.0 (advanced reasoning for complex data comparison)
+- **Model**: Google Gemini 2.5 Pro (advanced reasoning for complex data comparison)
 - **Capabilities**:
   - Compares reference data with Zebra Agent results
   - Processes results directly when no reference is provided
@@ -60,7 +60,7 @@ ZebraX orchestrates three specialized AI agents to conduct comprehensive researc
   - Outputs final article draft
   - Deep analysis and statistical reasoning
 - **Output**: Validation results, statistical analysis, article summary
-- **Why Gemini 2.0**: Superior reasoning capabilities for complex statistical analysis and cross-validation
+- **Why Gemini 2.5 Pro**: Superior reasoning capabilities for complex statistical analysis and cross-validation
 
 ### Data Flow
 
