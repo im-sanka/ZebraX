@@ -1,6 +1,5 @@
 import os
 import asyncio
-from dotenv import load_dotenv
 # Ensure google-adk is installed: pip install google-adk
 from google.adk.agents import Agent
 from google.adk.models.google_llm import Gemini
@@ -8,8 +7,6 @@ from google.adk.runners import InMemoryRunner
 from google.adk.tools import google_search
 from google.genai import types
 
-# Load environment variables from .env file
-load_dotenv()
 
 def create_root_agent():
     """Creates and returns the root agent using Google ADK."""

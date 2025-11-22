@@ -1,0 +1,6 @@
+google-adk
+python-dotenv
+pymupdf
+pytesseract
+Pillow
+google-genai
