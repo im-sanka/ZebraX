@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 from dotenv import load_dotenv
 # Ensure google-adk is installed: pip install google-adk
@@ -72,9 +73,12 @@ def simple_llm(prompt: str) -> str:
 if __name__ == "__main__":
     # Example usage
     try:
+        if len(sys.argv) < 2:
+            raise ValueError(f"Provide a file path to a PDF document. \nUsage: python {sys.argv[0]} /path/to/document.pdf")
+        
         print("\n--- Test: PDF Agent ---")
         # You would need a sample PDF to test this effectively
-        user_prompt = "Read the text from this PDF: /Users/immanuelsanka/Desktop/ZebraX/data/01/microservice_testing_slr.pdf"
+        user_prompt = f"Read the text from this PDF: {sys.argv[1]}"
         print(f"Sending prompt: {user_prompt}")
         result = simple_llm(user_prompt)
         print(f"Response:\n{result}")
