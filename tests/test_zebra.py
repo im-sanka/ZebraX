@@ -21,3 +21,26 @@ def test_excel_to_json():
         "strategy (secification, )....[from SWEBOK]": ""
     }
     assert json_template == expected_template, f"Expected {expected_template}, but got {json_template}"
+    
+    
+def test_keyword_seeker():
+    from agents.zebra.data_template_handling import keyword_seeker
+    
+    sample_text = """In this paper, we propose an approach to observe and detect
+performance degradation during the transition towards a microservice application. 
+In the context of testing, our approach aims at avoiding performance regression during 
+the transition from an old, monolithic, to a new microservice architecture.
+In the context of Lean development, this approach can be seen as an implementation of 
+Jidoka [8] (in English called Autonomation), which describes a mechanism, for which a 
+machine is able to detect an anomaly by itself and then stop to allow workers to investigate
+the reasons of the anomaly and restart the production. We see the contribution of our 
+tool in the same way: if the new architecture performs under a given threshold, 
+it might be time to stop developing and to rethink the architecture or to rethink 
+the used patterns to guarantee that the new system—while having all advantages
+of a microservice architecture—does not fall short in terms of performance"""
+    keywords = "regression, microservice"
+    
+    result = keyword_seeker(sample_text, keywords)
+    
+    assert "regression" in result
+    assert "microservice" in result

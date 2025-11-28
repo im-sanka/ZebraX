@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 
 def excel_to_json(file_path: str) -> dict:
     """
@@ -39,13 +40,30 @@ def domain_knowledge_retriever(keywords: str) -> str:
     """
     pass
 
-def keyword_semantic_seeker(research_paper_title: str, keywords: str) -> str:
+def keyword_seeker(paper_text: str, keywords: str) -> str:
     """
-    Searches the research paper for sections relevant to the provided keywords.
+    Searches the research paper text for the provided keywords gathered from the JSON template.
     Keywords are from the JSON template keys.
 
     Args:
-        research_paper_title (str): The title of the research paper.
+        paper_text (str): The extracted text content of the research paper.
         keywords (str): The keywords to search for in the research paper.
     """
-    pass
+    # Split keywords if comma-separated
+    keyword_list = [kw.strip() for kw in keywords.split(',')]
+
+    matches = []
+    
+    # Split text into sentences or paragraphs
+    sentences = re.split(r'(?<=[.!?])\s+', paper_text)
+    
+    for sentence in sentences:
+        if any(keyword.lower() in sentence.lower() for keyword in keyword_list):
+            matches.append(sentence.strip())
+    
+    # If no relevant sections found, return a message
+    if not matches:
+        return "No keywords found."
+    
+    # Join relevant sections
+    return "\n\n".join(matches)
