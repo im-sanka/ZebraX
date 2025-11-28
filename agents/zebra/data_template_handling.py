@@ -27,12 +27,14 @@ def data_template_filler(json_template: dict, paper_text: str, research_paper_ti
         paper_text (str): The extracted text content of the research paper.
         research_paper_title (str): The title of the research paper to fill into the template.
     """
-    # filled_template = json_template.copy()
-    # for key in filled_template:
-    #     if key.lower() in paper_text.lower():
-    #         filled_template[key] = research_paper_title
-    # return filled_template
-    pass
+    filled_template = json_template.copy()
+    for key in filled_template:
+        if key.lower() in paper_text.lower():
+            if isinstance(filled_template[key], list):
+                filled_template[key].append(research_paper_title)
+            else:
+                filled_template[key] = research_paper_title
+    return filled_template
 
 def keyword_seeker(paper_text: str, keywords: str) -> str:
     """
