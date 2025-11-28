@@ -1,9 +1,12 @@
 import pytest
+from pathlib import Path
 
 def test_excel_to_json():
     from agents.zebra.data_template_handling import excel_to_json
 
-    json_template = excel_to_json("/Users/rhn07/src/ZebraX/data/01/sample_template.xlsx")
+    # Use relative path from the test file
+    template_path = Path(__file__).parent.parent / "data" / "01" / "sample_template.xlsx"
+    json_template = excel_to_json(str(template_path))
     expected_template = {
         "Title": "",
         "Venue Type": "",
