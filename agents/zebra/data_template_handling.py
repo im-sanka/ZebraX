@@ -35,31 +35,3 @@ def data_template_filler(json_template: dict, paper_text: str, research_paper_ti
             else:
                 filled_template[key] = research_paper_title
     return filled_template
-
-def keyword_seeker(paper_text: str, keywords: str) -> str:
-    """
-    Searches the research paper text for the provided keywords gathered from the JSON template.
-    Keywords are from the JSON template keys.
-
-    Args:
-        paper_text (str): The extracted text content of the research paper.
-        keywords (str): The keywords to search for in the research paper.
-    """
-    # Split keywords if comma-separated
-    keyword_list = [kw.strip() for kw in keywords.split(',')]
-
-    matches = []
-    
-    # Split text into sentences or paragraphs
-    sentences = re.split(r'(?<=[.!?])\s+', paper_text)
-    
-    for sentence in sentences:
-        if any(keyword.lower() in sentence.lower() for keyword in keyword_list):
-            matches.append(sentence.strip())
-    
-    # If no relevant sections found, return a message
-    if not matches:
-        return "No keywords found."
-    
-    # Join relevant sections
-    return "\n\n".join(matches)

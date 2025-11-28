@@ -7,7 +7,7 @@ from google.adk.agents import Agent
 from google.adk.models.google_llm import Gemini
 from google.adk.runners import InMemoryRunner
 from agents.zebra.pdf_tool import read_pdf_text, extract_pdf_images, read_pdf_with_ocr, get_pdf_info, analyze_pdf_structure
-from agents.zebra.data_template_handling import keyword_seeker
+from agents.zebra.data_template_handling import data_template_filler
 
 load_dotenv()
 
@@ -42,7 +42,7 @@ def create_zebra_llm_agent():
         - `read_pdf_text`: Use this to extract text for Title, Authors, Abstract, and to find captions/context for tables and images.
         - `extract_pdf_images`: Use this to count images and find their locations.
         - `get_pdf_info`: Use this to get metadata which might help with Title and Authors.
-        - `keyword_seeker`: Use this to find information related to specific keywords in the text.
+        - `data_template_filler`: Use this to fill in structured data templates.
         
         Process:
         1. Call `get_pdf_info` to get metadata.
@@ -50,10 +50,11 @@ def create_zebra_llm_agent():
         3. Call `extract_pdf_images` to get the list of images.
         4. Correlate images with the text on their pages to generate summaries (look for "Figure X", "Table Y" captions).
         5. Identify tables from the text layout if possible.
+        6. Use `data_template_filler` to fill in structured data templates based on extracted information.
         
         Return ONLY the JSON object. Do not include markdown formatting like ```json.
         """,
-        tools=[read_pdf_text, extract_pdf_images, read_pdf_with_ocr, get_pdf_info, analyze_pdf_structure, keyword_seeker],
+        tools=[read_pdf_text, extract_pdf_images, read_pdf_with_ocr, get_pdf_info, analyze_pdf_structure, data_template_filler],
     )
     
     print("✅ Zebra LLM Agent defined.")
