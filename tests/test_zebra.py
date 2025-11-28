@@ -1,3 +1,4 @@
+from unittest import result
 import pytest
 from pathlib import Path
 
@@ -40,7 +41,7 @@ the used patterns to guarantee that the new system—while having all advantages
 of a microservice architecture—does not fall short in terms of performance"""
     keywords = "regression, microservice"
     
-    result = keyword_seeker(sample_text, keywords)
+    results = keyword_seeker(sample_text, keywords)
     
-    assert "regression" in result
-    assert "microservice" in result
+    assert "regression" in results
+    assert "microservice" in results
