@@ -31,15 +31,6 @@ def data_template_filler(json_template: dict, research_paper_title: str, researc
     """
     pass
 
-def domain_knowledge_retriever(keywords: str) -> str:
-    """
-    Retrieves domain-specific knowledge to assist the LLM in understanding context.
-
-    Args:
-        keyword (str): The domain for which to retrieve knowledge.
-    """
-    pass
-
 def keyword_seeker(paper_text: str, keywords: str) -> str:
     """
     Searches the research paper text for the provided keywords gathered from the JSON template.
