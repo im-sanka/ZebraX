@@ -643,3 +643,212 @@ def transform_column(file_path: str, column_name: str, transformation: str) -> D
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def find_row_by_title(file_path: str, paper_title: str, title_column: str = "Title") -> Dict[str, Any]:
+    """
+    Finds the row index in an Excel file that matches a given paper title.
+    Uses case-insensitive partial matching.
+
+    Args:
+        file_path: The path to the Excel file.
+        paper_title: The title of the paper to find.
+        title_column: The column name containing titles (default: "Title").
+    
+    Returns:
+        Dictionary with row_index if found, or error if not found.
+    """
+    try:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Excel file not found: {file_path}")
+        
+        df = pd.read_excel(file_path)
+        
+        if title_column not in df.columns:
+            # Try to find a column that looks like a title column
+            possible_title_cols = [col for col in df.columns if 'title' in col.lower()]
+            if possible_title_cols:
+                title_column = possible_title_cols[0]
+            else:
+                return {
+                    "success": False,
+                    "error": f"Title column '{title_column}' not found. Available columns: {list(df.columns)}"
+                }
+        
+        paper_title_lower = paper_title.lower().strip()
+        
+        # Try exact match first
+        for idx, row in df.iterrows():
+            cell_value = str(row[title_column]).lower().strip() if pd.notna(row[title_column]) else ""
+            if cell_value == paper_title_lower:
+                return {
+                    "success": True,
+                    "row_index": int(idx),
+                    "matched_title": row[title_column],
+                    "match_type": "exact"
+                }
+        
+        # Try partial match (paper title is contained in cell or vice versa)
+        for idx, row in df.iterrows():
+            cell_value = str(row[title_column]).lower().strip() if pd.notna(row[title_column]) else ""
+            if paper_title_lower in cell_value or cell_value in paper_title_lower:
+                return {
+                    "success": True,
+                    "row_index": int(idx),
+                    "matched_title": row[title_column],
+                    "match_type": "partial"
+                }
+        
+        # Try word-based matching (at least 70% of words match)
+        paper_words = set(paper_title_lower.split())
+        best_match = None
+        best_score = 0
+        
+        for idx, row in df.iterrows():
+            cell_value = str(row[title_column]).lower().strip() if pd.notna(row[title_column]) else ""
+            cell_words = set(cell_value.split())
+            
+            if not cell_words:
+                continue
+            
+            # Calculate overlap score
+            overlap = len(paper_words & cell_words)
+            score = overlap / max(len(paper_words), len(cell_words))
+            
+            if score > best_score and score >= 0.5:  # At least 50% word overlap
+                best_score = score
+                best_match = (idx, row[title_column])
+        
+        if best_match:
+            return {
+                "success": True,
+                "row_index": int(best_match[0]),
+                "matched_title": best_match[1],
+                "match_type": "fuzzy",
+                "match_score": round(best_score, 2)
+            }
+        
+        return {
+            "success": False,
+            "error": f"No matching row found for paper title: '{paper_title}'"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def update_classification_by_title(
+    file_path: str,
+    classifications: List[Dict[str, Any]],
+    column_name: str,
+    title_column: str = "Title"
+) -> Dict[str, Any]:
+    """
+    Updates classification results in Excel by matching paper titles to rows.
+    This is the PREFERRED method for saving classification results as it ensures
+    values are placed in the correct rows by matching paper titles.
+
+    Args:
+        file_path: The path to the Excel file.
+        classifications: List of classification results, each containing:
+                        - 'title': The paper title to match
+                        - 'result': The classification value (True/False or any string)
+                        Optional:
+                        - 'file': The PDF filename (used as fallback for title matching)
+        column_name: The name of the column to update/create with classification values.
+        title_column: The column in Excel containing paper titles (default: "Title").
+    
+    Returns:
+        Dictionary with success status, matched/unmatched counts, and details.
+    
+    Example:
+        update_classification_by_title(
+            "test/table_1.xlsx",
+            [{"title": "Paper A", "result": True}, {"title": "Paper B", "result": False}],
+            "Regression Testing"
+        )
+    """
+    try:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Excel file not found: {file_path}")
+        
+        # Load workbook for editing
+        wb = load_workbook(file_path)
+        ws = wb.active
+        
+        # Read data for title matching
+        df = pd.read_excel(file_path)
+        
+        # Find or determine title column
+        if title_column not in df.columns:
+            possible_title_cols = [col for col in df.columns if 'title' in col.lower()]
+            if possible_title_cols:
+                title_column = possible_title_cols[0]
+            else:
+                return {
+                    "success": False,
+                    "error": f"Title column '{title_column}' not found. Available columns: {list(df.columns)}"
+                }
+        
+        # Build column name to index mapping
+        col_map = {}
+        for col in range(1, ws.max_column + 1):
+            col_name = ws.cell(row=1, column=col).value
+            if col_name:
+                col_map[col_name] = col
+        
+        # Add column if it doesn't exist
+        column_added = False
+        if column_name not in col_map:
+            new_col = ws.max_column + 1
+            ws.cell(row=1, column=new_col).value = column_name
+            col_map[column_name] = new_col
+            column_added = True
+        
+        matched = []
+        unmatched = []
+        
+        for classification in classifications:
+            paper_title = classification.get('title', '')
+            result = classification.get('result', '')
+            pdf_file = classification.get('file', '')
+            
+            # Normalize the result value
+            normalized_value = _normalize_boolean_value(result)
+            
+            # Try to find matching row
+            match_result = find_row_by_title(file_path, paper_title, title_column)
+            
+            if match_result['success']:
+                row_index = match_result['row_index']
+                excel_row = row_index + 2  # +1 for 1-based, +1 for header
+                
+                ws.cell(row=excel_row, column=col_map[column_name]).value = normalized_value
+                matched.append({
+                    "paper_title": paper_title,
+                    "row_index": row_index,
+                    "matched_title": match_result.get('matched_title'),
+                    "match_type": match_result.get('match_type'),
+                    "value": normalized_value
+                })
+            else:
+                unmatched.append({
+                    "paper_title": paper_title,
+                    "pdf_file": pdf_file,
+                    "error": match_result.get('error')
+                })
+        
+        wb.save(file_path)
+        
+        return {
+            "success": True,
+            "message": f"Classification update completed: {len(matched)} matched, {len(unmatched)} unmatched.",
+            "file_path": file_path,
+            "column_name": column_name,
+            "column_added": column_added,
+            "matched_count": len(matched),
+            "unmatched_count": len(unmatched),
+            "matched": matched,
+            "unmatched": unmatched
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}

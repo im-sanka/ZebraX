@@ -26,6 +26,8 @@ from .tools.excel_tools import (
     get_excel_info,
     batch_update_cells,
     transform_column,
+    find_row_by_title,
+    update_classification_by_title,
 )
 from .instructions.excel_handler_instruction import EXCEL_HANDLER_INSTRUCTION
 
@@ -61,6 +63,9 @@ def create_excel_handler_agent() -> LlmAgent:
             # Bulk operations
             batch_update_cells,
             transform_column,
+            # Title-based operations (PREFERRED for classification results)
+            find_row_by_title,
+            update_classification_by_title,
             # Column operations
             add_column_to_excel,
             delete_excel_column,
