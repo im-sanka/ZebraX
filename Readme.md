@@ -237,7 +237,7 @@ ZebraX/
 
 ## 📄 License
 
-This project was created for the Google ADK Capstone Project 2025.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
 
