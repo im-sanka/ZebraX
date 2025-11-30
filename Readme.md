@@ -1,226 +1,240 @@
-# ZebraX: Automated Systematic Review & Research Analysis Platform
+# 🦓 ZebraX: AI-Powered Literature Review & Data Extraction
 
-ZebraX is an intelligent multi-agent system that automates systematic and scientific reviews using AI-powered research agents and Google's Agent Development Kit (ADK) for data extraction and processing.
+ZebraX is an intelligent multi-agent system that automates systematic literature reviews and research data extraction using Google's Agent Development Kit (ADK).
 
-## 🎯 Overview
+## 🎯 Problem Statement
 
-ZebraX orchestrates three specialized AI agents to conduct comprehensive research reviews:
+Literature review is a monumental task for students and researchers trying to understand the current state of knowledge in their field. The process typically involves:
 
-1. **Belo LLM** - Formulates research questions from data
-2. **Zebra Agent** - Extracts and processes research data
-3. **Cross Agent** - Validates results and performs statistical analysis
+- Reading dozens to hundreds of research papers
+- Manually extracting data points into spreadsheets
+- Classifying papers based on various criteria
+- Cross-validating extracted information
+
+**ZebraX tackles this challenge** by automating paper reading, answering research questions, and extracting structured data—saving researchers countless hours of manual work.
+
+## 🤖 Why Agents?
+
+With AI agents, we gain the flexibility to:
+- Add specialized tools for different extraction tasks
+- Orchestrate complex workflows with multiple steps
+- Process documents in parallel for efficiency
+- Maintain context across multi-step operations
 
 ## 🏗️ Architecture
 
 ![ZebraX Architecture](./images/Architecture.png)
 
-### System Components
+ZebraX consists of three specialized agents working together:
 
-#### 1. **Belo LLM** (Research Question Generator)
-- **Purpose**: Simple agent that formulates research questions based on RAG (Retrieval-Augmented Generation) data
-- **Model**: Google Gemini 2.5 Flash Lite (lightweight, fast inference)
-- **Inputs**: 
-  - User prompts
-  - Sample articles (optional)
-  - RAG pipeline with defined system prompts
-- **Output**: Research questions to guide data extraction
-- **Use Case**: When users don't have predefined research questions, Belo generates them from provided content
-- **Why Gemini 2.5 Flash Lite**: Optimal for quick, lightweight processing without complex reasoning
+### 1. 🦓 Zebra Agent (Multi-Agent Data Extractor)
 
-#### 2. **Zebra Agent** (Multi-Agent Data Extractor)
-- **Purpose**: Parallel and sequential data extraction from research materials
-- **Root Agent Model**: Google Gemini 2.5 Pro (tool-native, optimized for function calling)
-- **Sub-Agents**: Specialized Gemma 3 Multimodal instances for parallel processing
-- **Components**:
-  - **Root Agent**: Orchestrates and distributes tasks to Sub-Agents
-  - **Sub-Agents**: Parallel workers with specialized extraction capabilities
-  - **Data Extractor Tools** (native to Gemini):
-    - Data parser (structured extraction)
-    - Graph maker (relationship mapping)
-    - Grammatical checker (text validation)
-    - Additional domain-specific tools
-- **Process**: 
-  - Takes prompts and research questions as input
-  - Root Agent receives research queries
-  - Distributes extraction tasks to Sub-Agents in parallel
-  - Sub-Agents leverage Gemini's native tool-calling capabilities
-  - Optionally processes sample articles
-  - Outputs structured results
-- **Output**: Parsed data, graphs, validated content
-- **Why Gemini 2.5 Pro & Gemma**: Native tool integration in Pro for coordination, while Gemma provides cost-effective multimodal processing for sub-tasks.
+The main workhorse of ZebraX - a multi-agent system for parallel and sequential data extraction from research materials.
 
-#### 3. **Cross Agent** (Statistical Validator & Judge)
-- **Purpose**: Cross-validate results and perform statistical analysis
-- **Model**: Google Gemini 2.5 Pro (advanced reasoning for complex data comparison)
-- **Capabilities**:
-  - Compares reference data with Zebra Agent results
-  - Processes results directly when no reference is provided
-  - Generates summary tables
-  - Performs statistical validation
-  - Outputs final article draft
-  - Deep analysis and statistical reasoning
-- **Output**: Validation results, statistical analysis, article summary
-- **Why Gemini 2.5 Pro**: Superior reasoning capabilities for complex statistical analysis and cross-validation
+**Model:** Google Gemini 2.5 Flash (optimized for function calling)
 
-### Data Flow
+**Sub-Agents:**
+| Sub-Agent | Purpose |
+|-----------|---------|
+| **Router** | Intelligently routes requests to appropriate sub-agents |
+| **Paper Classifier** | Reads PDFs and classifies papers based on user-defined criteria |
+| **Excel Handler** | Manages all Excel operations (read, write, update, delete) |
+| **Summarizer** | Provides final summaries and reports to users |
 
+**Tools Available:**
+- **PDF Tools:**
+  - `read_pdf_text` - Extract text from PDF documents
+  - `batch_read_pdfs` - Process multiple PDFs in parallel
+  - `get_pdf_info` - Get PDF metadata
+  - `extract_pdf_images` - Extract images from PDFs
+
+- **Excel Tools:**
+  - `read_excel_data` / `excel_to_json` - Read Excel files
+  - `update_excel_row` / `batch_update_cells` - Update data
+  - `add_column_to_excel` / `delete_excel_column` - Column operations
+  - `find_row_by_title` / `update_classification_by_title` - Smart matching
+  - `transform_column` - Bulk transformations
+
+**Process Flow:**
 ```
-User Research Query
-    ↓
-    ├─→ [Belo LLM] → Research Questions
-    ↓
-Research Questions + Sample Articles
-    ↓
-    ├─→ [Zebra Agent] → Extracted Results
-    ↓
-Results + Reference Data (optional)
-    ↓
-    ├─→ [Cross Agent] → 
-        ├─ Validation Result
-        ├─ More Results
-        └─ Article Draft
+Research Query + PDFs + Excel Template
+         ↓
+    [Router Agent]
+         ↓
+    ┌────┴────┐
+    ↓         ↓
+[Paper      [Excel
+Classifier]  Handler]
+    ↓         ↓
+    └────┬────┘
+         ↓
+   [Summarizer]
+         ↓
+  Structured Results
 ```
+
+### 2. 🔔 Belo Agent (Research Question Generator)
+
+A lightweight agent that helps researchers formulate research questions when they don't have predefined ones.
+
+**Model:** Google Gemini 2.5 Flash (fast inference)
+
+**Capabilities:**
+- Formulates up to 5 research questions per request
+- Uses Google Search to find current trends and research gaps
+- Provides warm, encouraging guidance like a research advisor
+
+**Use Case:** When starting a new systematic review without clear research questions
+
+### 3. ✝️ Cross Agent (Statistical Validator)
+
+A validation agent for cross-checking extracted results and performing statistical analysis.
+
+**Model:** Google Gemini 2.5 Flash (advanced reasoning)
+
+**Sub-Agents:**
+| Sub-Agent | Purpose |
+|-----------|---------|
+| **Router** | Routes comparison requests |
+| **Cross Comparison** | Performs table comparisons and statistics |
+| **Summarizer** | Generates validation reports |
+
+**Statistical Tools:**
+- `compare_tables_overview` - High-level table comparison
+- `compare_column_values` - Column-by-column analysis
+- `calculate_cohens_kappa` - Inter-rater reliability
+- `calculate_all_agreement_metrics` - Comprehensive metrics
+- `get_disagreement_report` - Detailed difference reports
+- `full_statistical_comparison` - Complete analysis suite
 
 ## 🔄 Workflow
 
 ![ZebraX Workflow](./images/Main-idea.png)
 
-### Three-Checkpoint Systematic Review Process
+### Typical Use Case
 
-1. **First Checkpoint: Ground Truth & Data Collection**
-   - Establish research questions
-   - Gather replication package data
-   - Collect AI/perplexity research materials
-
-2. **Second Checkpoint: Data Comparison**
-   - Zebra Agent extracts and processes data
-   - Compare extracted results with reference data
-   - Prepare data for validation
-
-3. **Third Checkpoint: Final Analysis**
-   - Cross Agent validates findings
-   - Performs statistical analysis
-   - Generates article draft and comparison tables
+1. **Setup**: Prepare an Excel template with columns for data extraction
+2. **Input**: Provide PDF research papers and research questions
+3. **Process**: Zebra Agent reads papers and extracts data into Excel
+4. **Validate**: Cross Agent compares results with ground truth (if available)
+5. **Output**: Get structured data with validation statistics
 
 ## 🛠️ Technology Stack
 
-### AI & LLM Components (Google AI)
-- **Belo LLM**: Google Gemini 2.0 Flash (lightweight question generation)
-- **Zebra Agent Root**: Google Gemini Pro 1.5 (tool orchestration & coordination)
-- **Zebra Agent Sub-Agents**: Google Gemini Pro 1.5 (parallel data extraction with native tools)
-- **Cross Agent**: Google Gemini 2.0 (advanced statistical analysis & reasoning)
-- **Framework**: Google Agent Development Kit (ADK) (for agent orchestration, RAG pipeline, and multi-agent coordination)
-- **Data Processing**: Python
+| Component | Technology |
+|-----------|------------|
+| **Framework** | Google Agent Development Kit (ADK) |
+| **LLM Models** | Google Gemini 2.5 Flash |
+| **PDF Processing** | PyMuPDF (fitz), pytesseract, Pillow |
+| **Data Handling** | pandas, openpyxl |
+| **Statistical Analysis** | numpy, scipy |
 
-### Data Extraction Tools (ADK Integration)
-- **Agent Development Kit (ADK)**: For agent-level data extraction and processing
-- **Data Parser**: Structured data extraction
-- **Graph Maker**: Visual relationship mapping
-- **Grammatical Checker**: Text validation
-
-### Statistical Analysis
-- **Python Libraries**: 
-  - `pandas` for data manipulation
-  - `scipy`/`statsmodels` for statistical tests
-  - `matplotlib`/`seaborn` for visualization
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.8+
-- Google ADK installed and configured
-- API keys for LLM services (OpenAI/Anthropic)
-- Required Python dependencies
-
-### Installation
+## 📦 Installation
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/im-sanka/ZebraX.git
 cd ZebraX
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Set up environment variables
+# Create a .env file with your Google API key
+echo "GOOGLE_API_KEY=your_api_key_here" > .env
 ```
 
-### Configuration
+## 🚀 Usage
 
-1. Set up environment variables:
-```bash
-export GOOGLE_API_KEY="your-google-ai-api-key"
-export ADK_PATH="/path/to/agent-development-kit"
-```
-
-2. Configure RAG pipeline and system prompts
-
-3. Set up reference data sources (optional)
-
-### Running a Review
+### Running with ADK Web Interface
 
 ```bash
-# Option 1: With research questions
-python main.py --questions "research_questions.txt" --articles "sample_articles.txt"
+# Start the ADK web interface for Zebra agent
+adk web agents/zebra
 
-# Option 2: Generate questions automatically
-python main.py --belo --topic "Your research topic" --articles "sample_articles.txt"
+# Or run Belo agent
+adk web agents/belo
 
-# Option 3: Full workflow with validation
-python main.py --full-review --reference "reference_data.json" --articles "materials.txt"
+# Or run Cross agent
+adk web agents/cross
 ```
 
-## 📊 Output
+### Example Prompts for Zebra Agent
 
-ZebraX generates:
-- **Validation Results**: Cross-validation metrics
-- **Summary Tables**: Structured data comparisons
-- **Statistical Analysis**: p-values, effect sizes, confidence intervals
-- **Article Draft**: AI-generated research summary
-- **Extracted Data**: Structured graphs and parsed information
+```
+# Classify papers
+"Read all PDFs in /path/to/papers and classify them based on whether 
+they use machine learning. Update the results in /path/to/data.xlsx"
 
-## 🔍 When to Use Each Component
+# Extract data
+"Extract the sample size, methodology, and key findings from the papers 
+in /path/to/articles and add them to my Excel file"
 
-| Scenario | Model | Use Case |
-|----------|-------|----------|
-| No research questions yet | Belo (Gemini 2.0 Flash) | Fast question generation |
-| Need to extract data from articles | Zebra Agent (Gemini Pro 1.5 + Sub-Agents) | Parallel data extraction with tools |
-| Need statistical validation | Cross Agent (Gemini 2.0) | Advanced analysis & comparison |
-| Full systematic review | All three (in sequence) | Complete workflow |
-| Just need AI research questions | Belo (Gemini 2.0 Flash) | Lightweight inference |
+# Update Excel
+"Add a new column called 'Included' to my Excel file at /path/to/data.xlsx"
+```
 
-## ✅ Architecture Analysis
+### Example Prompts for Belo Agent
 
-**Does this make sense? YES, with these considerations:**
+```
+"I want to study the impact of synthetic biology on sustainable agriculture"
+"Help me formulate research questions about AI in healthcare"
+```
 
-### ✅ **Strengths:**
-1. **Modular Design**: Each agent has a single, well-defined responsibility
-2. **Scalability**: Zebra Agent's parallel processing allows efficient data extraction
-3. **Flexibility**: Works with or without reference data
-4. **Comprehensive**: Covers the full research review pipeline
-5. **Validation Built-in**: Cross Agent ensures result quality
+### Example Prompts for Cross Agent
 
-### 🤔 **Considerations:**
-1. **Data Quality Dependency**: Results depend heavily on initial article quality and RAG pipeline effectiveness
-2. **LLM Hallucination Risks**: Consider implementing fact-checking layers
-3. **ADK Integration**: Ensure ADK tools are properly interfaced for your data types
-4. **Error Handling**: Add fallback mechanisms when agents fail
-5. **Cost**: Multiple LLM calls could be expensive—consider caching strategies
+```
+"Compare the tables at /path/to/ground_truth.xlsx and /path/to/extracted.xlsx"
+"Calculate Cohen's Kappa for the 'Classification' column between these two files"
+```
 
-### 💡 **Suggested Improvements:**
-1. Add a **validation feedback loop** - let Cross Agent inform Zebra Agent of extraction errors
-2. Implement **confidence scores** - track certainty of extracted data
-3. Add **human-in-the-loop** checkpoints for critical decisions
-4. Create **audit trails** - log all agent decisions for reproducibility
-5. Support **incremental reviews** - process large datasets in batches
+## 📁 Project Structure
+
+```
+ZebraX/
+├── agents/
+│   ├── zebra/           # Main data extraction agent
+│   │   ├── agent.py     # Orchestrator (BaseAgent)
+│   │   └── subagents/
+│   │       ├── paper_classifier.py
+│   │       ├── excel_handler.py
+│   │       ├── summarizer.py
+│   │       ├── tools/
+│   │       │   ├── pdf_tools.py
+│   │       │   └── excel_tools.py
+│   │       └── instructions/
+│   ├── belo/            # Research question generator
+│   │   └── agent.py
+│   └── cross/           # Statistical validator
+│       ├── agent.py
+│       └── subagents/
+│           ├── cross_comparison.py
+│           ├── summarizer.py
+│           └── tools/
+│               └── cross_tools.py
+├── data/                # Sample data files
+├── test/                # Test articles
+├── images/              # Architecture diagrams
+└── requirements.txt
+```
+
+## 🎯 Future Improvements
+
+- [ ] Enhanced Belo and Cross orchestration integration
+- [ ] Support for more document formats (Word, HTML)
+- [ ] Batch processing optimization for large paper sets
+- [ ] Interactive web dashboard for monitoring extraction progress
+- [ ] Export to multiple formats (BibTeX, RIS, CSV)
 
 ## 👥 Authors
 
 - [**im-sanka**](https://github.com/im-sanka)
 - [**rahmanuh**](https://github.com/rahmanuh)
 
-## 📞 Support
+## 📄 License
 
-For issues and questions, please open an issue on GitHub.
+This project was created for the Google ADK Hackathon 2025.
+
+---
+
+*Built with ❤️ using Google Agent Development Kit (ADK) and Gemini*

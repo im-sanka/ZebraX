@@ -483,7 +483,7 @@ def list_pdf_files(directory: str) -> List[str]:
     return pdf_files
 
 
-def batch_update_cells(file_path: str, updates: List[Dict[str, Any]]) -> Dict[str, Any]:
+def batch_update_cells(file_path: str, updates: str) -> dict:
     """
     Updates multiple cells in an Excel file in a single operation.
     Much more efficient than calling update_excel_row multiple times.
@@ -491,13 +491,17 @@ def batch_update_cells(file_path: str, updates: List[Dict[str, Any]]) -> Dict[st
 
     Args:
         file_path: The path to the Excel file.
-        updates: List of updates, each dict with 'row_index', 'column_name', and 'value'.
-                 Example: [{"row_index": 0, "column_name": "Status", "value": "TRUE"},
-                          {"row_index": 1, "column_name": "Status", "value": "FALSE"}]
+        updates: JSON string containing a list of updates, each with 'row_index', 'column_name', and 'value'.
+                 Example: '[{"row_index": 0, "column_name": "Status", "value": "TRUE"},
+                           {"row_index": 1, "column_name": "Status", "value": "FALSE"}]'
     
     Returns:
         Dictionary with success status and details.
     """
+    import json
+    # Parse JSON string to list
+    if isinstance(updates, str):
+        updates = json.loads(updates)
     try:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Excel file not found: {file_path}")
@@ -738,35 +742,47 @@ def find_row_by_title(file_path: str, paper_title: str, title_column: str = "Tit
 
 def update_classification_by_title(
     file_path: str,
-    classifications: List[Dict[str, Any]],
+    classifications: str,
     column_name: str,
-    title_column: str = "Title"
-) -> Dict[str, Any]:
+    title_column: str = "Title",
+    add_missing_rows: bool = True
+) -> dict:
     """
     Updates classification results in Excel by matching paper titles to rows.
+    If a paper is not found in the Excel and add_missing_rows=True, a new row is added.
     This is the PREFERRED method for saving classification results as it ensures
     values are placed in the correct rows by matching paper titles.
 
     Args:
         file_path: The path to the Excel file.
-        classifications: List of classification results, each containing:
+        classifications: JSON string containing list of classification results, each with:
                         - 'title': The paper title to match
                         - 'result': The classification value (True/False or any string)
                         Optional:
-                        - 'file': The PDF filename (used as fallback for title matching)
+                        - 'file': The PDF filename
+                        - 'evidence': Classification evidence/reasoning
+                        Example: '[{"title": "Paper A", "result": true}, {"title": "Paper B", "result": false}]'
         column_name: The name of the column to update/create with classification values.
         title_column: The column in Excel containing paper titles (default: "Title").
+        add_missing_rows: If True, papers not found in Excel will be added as new rows (default: True).
     
     Returns:
-        Dictionary with success status, matched/unmatched counts, and details.
+        Dictionary with success status, matched/unmatched/added counts, and details.
     
     Example:
         update_classification_by_title(
             "test/table_1.xlsx",
-            [{"title": "Paper A", "result": True}, {"title": "Paper B", "result": False}],
-            "Regression Testing"
+            '[{"title": "Paper A", "result": true}, {"title": "Paper B", "result": false}]',
+            "Regression Testing",
+            add_missing_rows=True
         )
     """
+    import json
+    # Parse JSON string to list if needed
+    if isinstance(classifications, str):
+        classifications = json.loads(classifications)
+    elif isinstance(classifications, list):
+        pass  # Already a list, use as-is
     try:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Excel file not found: {file_path}")
@@ -779,10 +795,11 @@ def update_classification_by_title(
         df = pd.read_excel(file_path)
         
         # Find or determine title column
+        actual_title_column = title_column
         if title_column not in df.columns:
             possible_title_cols = [col for col in df.columns if 'title' in col.lower()]
             if possible_title_cols:
-                title_column = possible_title_cols[0]
+                actual_title_column = possible_title_cols[0]
             else:
                 return {
                     "success": False,
@@ -796,7 +813,7 @@ def update_classification_by_title(
             if col_name:
                 col_map[col_name] = col
         
-        # Add column if it doesn't exist
+        # Add classification column if it doesn't exist
         column_added = False
         if column_name not in col_map:
             new_col = ws.max_column + 1
@@ -805,6 +822,7 @@ def update_classification_by_title(
             column_added = True
         
         matched = []
+        added = []
         unmatched = []
         
         for classification in classifications:
@@ -816,7 +834,7 @@ def update_classification_by_title(
             normalized_value = _normalize_boolean_value(result)
             
             # Try to find matching row
-            match_result = find_row_by_title(file_path, paper_title, title_column)
+            match_result = find_row_by_title(file_path, paper_title, actual_title_column)
             
             if match_result['success']:
                 row_index = match_result['row_index']
@@ -830,6 +848,78 @@ def update_classification_by_title(
                     "match_type": match_result.get('match_type'),
                     "value": normalized_value
                 })
+            elif add_missing_rows:
+                # Add new row for this paper
+                new_row = ws.max_row + 1
+                
+                # Ensure title column exists in col_map
+                if actual_title_column not in col_map:
+                    # Create title column if it doesn't exist
+                    new_col_idx = ws.max_column + 1
+                    ws.cell(row=1, column=new_col_idx).value = actual_title_column
+                    col_map[actual_title_column] = new_col_idx
+                
+                # Add title
+                ws.cell(row=new_row, column=col_map[actual_title_column]).value = paper_title
+                
+                # Add classification value
+                ws.cell(row=new_row, column=col_map[column_name]).value = normalized_value
+                
+                # Common field mappings (classification key -> possible Excel column names)
+                field_mappings = {
+                    'authors': ['authors', 'author', 'author(s)', 'writer', 'writers'],
+                    'year': ['year', 'publication year', 'pub year', 'date', 'published'],
+                    'file': ['file', 'filename', 'pdf', 'source'],
+                    'evidence': ['evidence', 'notes', 'comments', 'reasoning'],
+                    'confidence': ['confidence', 'confidence level'],
+                    'keywords_found': ['keywords found', 'keywords', 'matched keywords'],
+                }
+                
+                # Add any additional fields from classification that match existing columns
+                for key, value in classification.items():
+                    if key in ['title', 'result']:
+                        continue  # Already handled
+                    if value is None or value == '':
+                        continue  # Skip empty values
+                    
+                    # Convert lists to comma-separated strings
+                    if isinstance(value, list):
+                        value = ', '.join(str(v) for v in value)
+                    
+                    # Check direct match first (case-insensitive)
+                    matched_column = None
+                    for col_name in col_map:
+                        if col_name.lower() == key.lower():
+                            matched_column = col_name
+                            break
+                    
+                    # If no direct match, try the field mappings
+                    if not matched_column and key.lower() in field_mappings:
+                        possible_names = field_mappings[key.lower()]
+                        for col_name in col_map:
+                            if col_name.lower() in possible_names:
+                                matched_column = col_name
+                                break
+                    
+                    # Write the value if we found a matching column
+                    if matched_column:
+                        ws.cell(row=new_row, column=col_map[matched_column]).value = str(value)
+                
+                # Extract metadata that was added
+                authors = classification.get('authors', '')
+                year = classification.get('year', '')
+                
+                added.append({
+                    "paper_title": paper_title,
+                    "authors": authors,
+                    "year": year,
+                    "pdf_file": pdf_file,
+                    "row_index": new_row - 2,  # Convert back to 0-based
+                    "value": normalized_value
+                })
+                
+                # Update the file so subsequent find_row_by_title calls can find newly added rows
+                wb.save(file_path)
             else:
                 unmatched.append({
                     "paper_title": paper_title,
@@ -839,16 +929,143 @@ def update_classification_by_title(
         
         wb.save(file_path)
         
+        message_parts = [f"{len(matched)} matched"]
+        if added:
+            message_parts.append(f"{len(added)} added as new rows")
+        if unmatched:
+            message_parts.append(f"{len(unmatched)} unmatched")
+        
         return {
             "success": True,
-            "message": f"Classification update completed: {len(matched)} matched, {len(unmatched)} unmatched.",
+            "message": f"Classification update completed: {', '.join(message_parts)}.",
             "file_path": file_path,
             "column_name": column_name,
             "column_added": column_added,
             "matched_count": len(matched),
+            "added_count": len(added),
             "unmatched_count": len(unmatched),
             "matched": matched,
+            "added": added,
             "unmatched": unmatched
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def add_paper_row(
+    file_path: str,
+    title: str,
+    data: str = None,
+    title_column: str = "Title"
+) -> dict:
+    """
+    Adds a new paper row to the Excel file.
+    Use this when you have a paper that doesn't exist in the Excel yet.
+
+    Args:
+        file_path: The path to the Excel file.
+        title: The title of the paper to add.
+        data: Optional JSON string of column_name: value pairs to populate the row.
+              Example: '{"Year": "2024", "Authors": "Smith et al.", "Regression Testing": "TRUE"}'
+        title_column: The column name for the title (default: "Title").
+    
+    Returns:
+        Dictionary with success status and the new row index.
+    
+    Example:
+        add_paper_row(
+            "test/table_1.xlsx",
+            "New Paper Title",
+            '{"Year": "2024", "Authors": "Smith et al.", "Regression Testing": "TRUE"}'
+        )
+    """
+    import json
+    # Parse JSON string to dict if needed
+    if isinstance(data, str):
+        data = json.loads(data)
+    elif data is None:
+        data = {}
+    try:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Excel file not found: {file_path}")
+        
+        # First check if paper already exists
+        existing = find_row_by_title(file_path, title, title_column)
+        if existing['success']:
+            return {
+                "success": False,
+                "error": f"Paper already exists at row {existing['row_index']}: '{existing['matched_title']}'",
+                "existing_row_index": existing['row_index']
+            }
+        
+        # Load workbook
+        wb = load_workbook(file_path)
+        ws = wb.active
+        
+        # Build column name to index mapping
+        col_map = {}
+        for col in range(1, ws.max_column + 1):
+            col_name = ws.cell(row=1, column=col).value
+            if col_name:
+                col_map[col_name] = col
+        
+        # Find title column
+        actual_title_column = title_column
+        if title_column not in col_map:
+            possible_title_cols = [col for col in col_map if 'title' in col.lower()]
+            if possible_title_cols:
+                actual_title_column = possible_title_cols[0]
+            else:
+                # Create title column if it doesn't exist
+                new_col = ws.max_column + 1
+                ws.cell(row=1, column=new_col).value = title_column
+                col_map[title_column] = new_col
+                actual_title_column = title_column
+        
+        # Add new row
+        new_row = ws.max_row + 1
+        new_row_index = new_row - 2  # 0-based index excluding header
+        
+        # Add title
+        ws.cell(row=new_row, column=col_map[actual_title_column]).value = title
+        
+        # Add additional data
+        columns_updated = [actual_title_column]
+        columns_created = []
+        
+        if data:
+            for key, value in data.items():
+                # Find matching column (case-insensitive)
+                matched_col = None
+                for col_name in col_map:
+                    if col_name.lower() == key.lower():
+                        matched_col = col_name
+                        break
+                
+                if matched_col:
+                    normalized_value = _normalize_boolean_value(value)
+                    ws.cell(row=new_row, column=col_map[matched_col]).value = normalized_value
+                    columns_updated.append(matched_col)
+                else:
+                    # Create new column for this data
+                    new_col_idx = ws.max_column + 1
+                    ws.cell(row=1, column=new_col_idx).value = key
+                    col_map[key] = new_col_idx
+                    normalized_value = _normalize_boolean_value(value)
+                    ws.cell(row=new_row, column=new_col_idx).value = normalized_value
+                    columns_created.append(key)
+                    columns_updated.append(key)
+        
+        wb.save(file_path)
+        
+        return {
+            "success": True,
+            "message": f"Added new paper row at index {new_row_index}",
+            "file_path": file_path,
+            "row_index": new_row_index,
+            "title": title,
+            "columns_updated": columns_updated,
+            "columns_created": columns_created
         }
     except Exception as e:
         return {"success": False, "error": str(e)}

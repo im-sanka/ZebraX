@@ -28,6 +28,7 @@ from .tools.excel_tools import (
     transform_column,
     find_row_by_title,
     update_classification_by_title,
+    add_paper_row,
 )
 from .instructions.excel_handler_instruction import EXCEL_HANDLER_INSTRUCTION
 
@@ -66,6 +67,7 @@ def create_excel_handler_agent() -> LlmAgent:
             # Title-based operations (PREFERRED for classification results)
             find_row_by_title,
             update_classification_by_title,
+            add_paper_row,
             # Column operations
             add_column_to_excel,
             delete_excel_column,

@@ -12,6 +12,8 @@ Uses Google ADK's BaseAgent pattern with _run_async_impl for custom orchestratio
 
 import os
 import sys
+import re
+import json
 import asyncio
 import logging
 from typing import AsyncGenerator
@@ -32,6 +34,9 @@ from .subagents.excel_handler import create_excel_handler_agent
 from .subagents.summarizer import create_summarizer_agent
 from .subagents.instructions.router_instruction import ROUTER_INSTRUCTION
 
+# Import Excel tools for direct use
+from .subagents.tools.excel_tools import update_classification_by_title
+
 load_dotenv()
 
 # Configure logging
@@ -40,6 +45,59 @@ logger = logging.getLogger(__name__)
 
 # Model constant
 GEMINI_MODEL = "gemini-2.5-flash"
+
+
+def _extract_json_from_text(text: str) -> dict:
+    """Extract JSON object from text that may contain markdown or other content."""
+    # Try to find JSON in code blocks first (greedy match for nested objects)
+    json_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', text, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+    
+    # Try to find JSON that starts with { and contains "criterion" - use greedy match
+    # Look for the outermost JSON object containing our expected keys
+    json_match = re.search(r'(\{[^{}]*"criterion".*"classifications"\s*:\s*\[.*?\]\s*,?\s*"summary".*?\})', text, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+    
+    # Try to find any JSON object that spans from first { to last }
+    first_brace = text.find('{')
+    last_brace = text.rfind('}')
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        potential_json = text[first_brace:last_brace + 1]
+        try:
+            return json.loads(potential_json)
+        except json.JSONDecodeError:
+            pass
+    
+    # Try to parse the entire text as JSON
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    
+    return None
+
+
+def _extract_excel_path_from_prompt(prompt: str) -> str:
+    """Extract Excel file path from the user's prompt."""
+    # Look for common patterns
+    patterns = [
+        r'excel[_ ]?(?:file|path)?[:\s]+["\']?([^\s"\']+\.xlsx?)["\']?',
+        r'["\']([^\s"\']+\.xlsx?)["\']',
+        r'(\S+\.xlsx?)',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, prompt, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return None
 
 
 # =============================================================================
@@ -150,11 +208,79 @@ class ZebraAgent(BaseAgent):
                 async for event in self.excel_handler.run_async(ctx):
                     yield event
         
-        # Step 3: If we classified but didn't explicitly run excel, run it now to save results
-        if executed_classify and "excel" not in request_types:
-            logger.info(f"[{self.name}] Auto-routing to excel_handler to save classification results...")
-            async for event in self.excel_handler.run_async(ctx):
-                yield event
+        # Step 3: If we classified, directly save results to Excel
+        if executed_classify:
+            logger.info(f"[{self.name}] Saving classification results to Excel...")
+            
+            # Get the classification result from state (this is the LLM's text output)
+            classification_result_text = ctx.session.state.get("classification_result", "")
+            logger.info(f"[{self.name}] Classification result text length: {len(classification_result_text) if classification_result_text else 0}")
+            
+            if classification_result_text:
+                # Try to extract JSON from the classification result
+                logger.info(f"[{self.name}] Attempting to extract JSON from classification result...")
+                classification_data = _extract_json_from_text(classification_result_text)
+                
+                if classification_data:
+                    logger.info(f"[{self.name}] ✅ Parsed classification data successfully")
+                    logger.info(f"[{self.name}] Keys found: {list(classification_data.keys())}")
+                    
+                    # Extract the required fields
+                    criterion = classification_data.get("criterion", "Classification")
+                    excel_path = classification_data.get("excel_path", "")
+                    classifications = classification_data.get("classifications", [])
+                    logger.info(f"[{self.name}] Criterion: {criterion}, Excel: {excel_path}, Classifications: {len(classifications)}")
+                    
+                    # If no excel_path in the result, try to extract from original prompt
+                    if not excel_path:
+                        # Get original user message from session
+                        user_messages = [e for e in ctx.session.events if hasattr(e, 'content')]
+                        if user_messages:
+                            original_prompt = str(user_messages[0].content) if user_messages else ""
+                            excel_path = _extract_excel_path_from_prompt(original_prompt)
+                    
+                    # Default path if still not found
+                    if not excel_path:
+                        excel_path = "test/table_1.xlsx"
+                    
+                    if classifications:
+                        logger.info(f"[{self.name}] Updating Excel file: {excel_path}")
+                        logger.info(f"[{self.name}] Column: {criterion}, Papers: {len(classifications)}")
+                        
+                        # Directly call the Excel update tool
+                        try:
+                            result = update_classification_by_title(
+                                file_path=excel_path,
+                                classifications=classifications,
+                                column_name=criterion,
+                                title_column="Title",
+                                add_missing_rows=True
+                            )
+                            
+                            # Store the result in state for the summarizer
+                            ctx.session.state["excel_result"] = str(result)
+                            logger.info(f"[{self.name}] Excel update result: {result.get('message', 'Unknown')}")
+                            
+                            if result.get("success"):
+                                matched = result.get("matched_count", 0)
+                                added = result.get("added_count", 0)
+                                logger.info(f"[{self.name}] ✅ Excel updated: {matched} matched, {added} added as new rows")
+                            else:
+                                logger.error(f"[{self.name}] ❌ Excel update failed: {result.get('error', 'Unknown error')}")
+                        except Exception as e:
+                            logger.error(f"[{self.name}] ❌ Exception during Excel update: {str(e)}")
+                            ctx.session.state["excel_result"] = f"Error: {str(e)}"
+                    else:
+                        logger.warning(f"[{self.name}] No classifications found in the result")
+                else:
+                    logger.warning(f"[{self.name}] Could not parse JSON from classification result")
+                    logger.warning(f"[{self.name}] First 500 chars: {classification_result_text[:500] if classification_result_text else 'EMPTY'}")
+                    # Fall back to LLM-based excel handler
+                    logger.info(f"[{self.name}] Falling back to excel_handler agent...")
+                    async for event in self.excel_handler.run_async(ctx):
+                        yield event
+            else:
+                logger.warning(f"[{self.name}] No classification_result in session state")
         
         # Step 4: Run summarizer to provide final response to user
         logger.info(f"[{self.name}] Running summarizer to provide final response...")
