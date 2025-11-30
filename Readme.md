@@ -90,7 +90,7 @@ A lightweight agent that helps researchers formulate research questions when the
 
 **Use Case:** When starting a new systematic review without clear research questions
 
-### 3. ✝️ Cross Agent (Statistical Validator)
+### 3. ❎ Cross Agent (Statistical Validator)
 
 A validation agent for cross-checking extracted results and performing statistical analysis.
 
@@ -241,4 +241,4 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-*Built with ❤️ using Google Agent Development Kit (ADK) and Gemini*
+*Built with ❤️ using Google Agent Development Kit (ADK) and Gemini* 
