@@ -2,6 +2,10 @@
 
 ZebraX is an intelligent multi-agent system that automates systematic literature reviews and research data extraction using Google's Agent Development Kit (ADK).
 
+## 🎬 Demo
+
+[![ZebraX Demo](https://img.youtube.com/vi/4t44i6N9z4s/0.jpg)](https://youtu.be/4t44i6N9z4s)
+
 ## 🎯 Problem Statement
 
 Literature review is a monumental task for students and researchers trying to understand the current state of knowledge in their field. The process typically involves:
