@@ -237,7 +237,7 @@ ZebraX/
 
 ## 📄 License
 
-This project was created for the Google ADK Hackathon 2025.
+This project was created for the Google ADK Capstone Project 2025.
 
 ---
 
